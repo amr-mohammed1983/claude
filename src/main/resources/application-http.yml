@@ -1,0 +1,21 @@
+# Streamable HTTP transport: java ... --spring.profiles.active=http  (build with -Phttp)
+spring:
+  main:
+    web-application-type: servlet
+  ai:
+    mcp:
+      server:
+        stdio: false
+        protocol: STREAMABLE
+        streamable-http:
+          mcp-endpoint: /mcp
+  security:
+    user:
+      name: ${MCP_HTTP_USER:mcp}
+      password: ${MCP_HTTP_PASSWORD}   # required; no default on purpose
+server:
+  address: ${MCP_HTTP_ADDRESS:127.0.0.1}
+  port: ${MCP_HTTP_PORT:8080}
+logging:
+  pattern:
+    console: "%d{HH:mm:ss} %-5level %logger{20} - %msg%n"

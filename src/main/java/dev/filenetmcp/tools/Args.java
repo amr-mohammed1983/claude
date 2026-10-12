@@ -1,6 +1,6 @@
 package dev.filenetmcp.tools;
 
-import dev.filenetmcp.Config;
+import dev.filenetmcp.FileNetProperties;
 import dev.filenetmcp.gateway.FileNetGateway.Content;
 
 import java.io.IOException;
@@ -14,9 +14,9 @@ import java.util.Map;
 /** Typed, validated access to a tool call's raw argument map. All argument parsing lives here. */
 public final class Args {
     private final Map<String, Object> raw;
-    private final Config config;
+    private final FileNetProperties config;
 
-    public Args(Map<String, Object> raw, Config config) {
+    public Args(Map<String, Object> raw, FileNetProperties config) {
         this.raw = raw == null ? Map.of() : raw;
         this.config = config;
     }
@@ -56,7 +56,7 @@ public final class Args {
 
     /** Object store: explicit argument, else FILENET_OBJECT_STORE. */
     public String objectStore() {
-        String os = optStr("objectStore", config.defaultObjectStore());
+        String os = optStr("objectStore", config.objectStore());
         if (os == null || os.isBlank())
             throw new IllegalArgumentException("objectStore is required (or set FILENET_OBJECT_STORE)");
         return os;
@@ -82,7 +82,7 @@ public final class Args {
     /** Resolves a local path, confined to FILENET_FILE_ROOT when configured. */
     public Path safePath(String path) {
         Path p = Path.of(path).toAbsolutePath().normalize();
-        Path root = config.fileRoot();
+        Path root = config.fileRoot() == null ? null : config.fileRoot().toAbsolutePath().normalize();
         if (root != null && !p.startsWith(root))
             throw new IllegalArgumentException("Path is outside FILENET_FILE_ROOT: " + path);
         return p;

@@ -30,7 +30,7 @@ import com.filenet.api.query.RepositoryRow;
 import com.filenet.api.query.SearchSQL;
 import com.filenet.api.query.SearchScope;
 import com.filenet.api.util.UserContext;
-import dev.filenetmcp.Config;
+import dev.filenetmcp.FileNetProperties;
 import dev.filenetmcp.gateway.FileNetGateway;
 
 import java.io.ByteArrayInputStream;
@@ -56,13 +56,13 @@ import javax.security.auth.Subject;
  * share one code path.
  */
 public final class JaceGateway implements FileNetGateway {
-    private final Config config;
+    private final FileNetProperties config;
     private final Map<String, ObjectStore> stores = new ConcurrentHashMap<>();
     private volatile Connection connection;
     private volatile Subject subject;
     private volatile Domain domain;
 
-    public JaceGateway(Config config) {
+    public JaceGateway(FileNetProperties config) {
         if (config.uri() == null || config.uri().isBlank()) {
             throw new IllegalArgumentException("FILENET_URI is required, e.g. https://host:9443/wsi/FNCEWS40MTOM/");
         }
@@ -74,7 +74,7 @@ public final class JaceGateway implements FileNetGateway {
     private synchronized void connect() {
         if (connection != null) return;
         Connection con = Factory.Connection.getConnection(config.uri());
-        subject = UserContext.createSubject(con, config.username(), config.password(), config.stanza());
+        subject = UserContext.createSubject(con, config.username(), config.password(), config.jaasStanza());
         connection = con;
     }
 

@@ -1,6 +1,6 @@
 package dev.filenetmcp.tools;
 
-import dev.filenetmcp.Config;
+import dev.filenetmcp.FileNetProperties;
 import dev.filenetmcp.gateway.FileNetGateway;
 import dev.filenetmcp.gateway.FileNetGateway.Content;
 
@@ -8,13 +8,19 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 /** The complete list of tools. Each tool is a few lines: schema + one gateway call. */
+@Component
 public final class ToolCatalog {
     private static final String OS_DOC = "Object store symbolic name. Defaults to FILENET_OBJECT_STORE.";
     private static final String CLASS_DOC = "CE class symbolic name (e.g. Document, Folder, or a custom class). Default: ";
@@ -22,10 +28,33 @@ public final class ToolCatalog {
     private static final String PROPS_DOC = "Property symbolic name -> value. Dates: {\"$date\":\"2024-01-31T00:00:00Z\"}.";
     private static final String CONTENT_DOC = "Content: provide contentBase64 or filePath (local; confined to FILENET_FILE_ROOT).";
 
-    private ToolCatalog() {}
+    private final FileNetGateway gw;
+    private final FileNetProperties config;
 
-    /** Builds the tools exposed under the given config (mutating tools are dropped in read-only mode). */
-    public static List<ToolDef> build(FileNetGateway gw, Config config) {
+    @Autowired
+    public ToolCatalog(ObjectProvider<FileNetGateway> gateway, FileNetProperties config) {
+        this(gateway.getIfAvailable(ToolCatalog::unavailableGateway), config);
+    }
+
+    public ToolCatalog(FileNetGateway gw, FileNetProperties config) {
+        this.gw = gw;
+        this.config = config;
+    }
+
+    /**
+     * Stand-in used when Jace.jar is absent (no JaceGateway bean): the server still starts and lists tools,
+     * and every call reports how to fix the setup.
+     */
+    private static FileNetGateway unavailableGateway() {
+        LoggerFactory.getLogger(ToolCatalog.class).warn("JaceGateway not available: build with -Pjace and add Jace.jar to the classpath (docs/setup.md)");
+        return (FileNetGateway) Proxy.newProxyInstance(ToolCatalog.class.getClassLoader(), new Class<?>[]{FileNetGateway.class},
+                (proxy, method, args) -> {
+                    throw new IllegalStateException("FileNet Content Engine API (Jace.jar) is not on the classpath; see docs/setup.md");
+                });
+    }
+
+    /** The tools exposed under the current config (mutating tools are dropped in read-only mode). */
+    public List<ToolDef> tools() {
         List<ToolDef> tools = new ArrayList<>();
 
         tools.add(os(ToolDef.builder("filenet_list_object_stores", "List the object stores in the FileNet domain.").readOnly(), false)
