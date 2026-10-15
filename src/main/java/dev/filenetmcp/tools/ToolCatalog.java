@@ -3,6 +3,7 @@ package dev.filenetmcp.tools;
 import dev.filenetmcp.FileNetProperties;
 import dev.filenetmcp.gateway.FileNetGateway;
 import dev.filenetmcp.gateway.FileNetGateway.Content;
+import dev.filenetmcp.util.Util;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -112,7 +113,7 @@ public final class ToolCatalog {
                 .string("className", CLASS_DOC + "Document", false).string("ref", REF_DOC, true)
                 .handle(a -> {
                     gw.deleteObject(a.objectStore(), a.optStr("className", "Document"), a.str("ref"));
-                    return Map.of("deleted", a.str("ref"));
+                    return Util.mapOf("deleted", a.str("ref"));
                 }));
 
         tools.add(os(ToolDef.builder("filenet_checkout", "Reserve (check out) a document."), true)
@@ -129,7 +130,10 @@ public final class ToolCatalog {
                 .handle(a -> gw.checkin(a.objectStore(), a.str("ref"), a.optMap("properties"), a.optContent(),
                         a.optBool("majorVersion", true))));
 
-        return config.readOnly() ? tools.stream().filter(ToolDef::readOnly).toList() : tools;
+        if (!config.readOnly()) return tools;
+        List<ToolDef> readOnly = new ArrayList<>();
+        for (ToolDef t : tools) if (t.readOnly()) readOnly.add(t);
+        return readOnly;
     }
 
     /** Adds the shared objectStore argument. */

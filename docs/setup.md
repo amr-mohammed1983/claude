@@ -2,8 +2,9 @@
 
 ## Prerequisites
 
-- JDK 17+ and Maven 3.9+
-- FileNet P8 5.7 **Content Engine Java API** jars. Take `Jace.jar` (typically `<FileNet>/CEClient/lib/Jace.jar`)
+- Oracle JDK 8 (or any Java 8) and Maven 3.6+. Newer JDKs can build it too (the build targets Java 8 with
+  `--release 8`), but run it on the JVM your FileNet client libraries support.
+- FileNet P8 5.5 **Content Engine Java API** jars. Take `Jace.jar` (typically `<FileNet>/CEClient/lib/Jace.jar`)
   from a FileNet client install matching your server. IBM does not publish it to Maven Central.
 - Network access to the CE web-services endpoint and a (least-privilege) FileNet account.
 - A JAAS configuration. Jace looks up the stanza `FILENET_JAAS_STANZA` (default `FileNetP8WSI`) in the file

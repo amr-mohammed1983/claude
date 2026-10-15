@@ -2,24 +2,10 @@ spring:
   main:
     web-application-type: none   # stdio transport: no web server
     banner-mode: off
-  ai:
-    mcp:
-      server:
-        name: filenet-mcp
-        version: 0.1.0
-        type: SYNC
-        stdio: true
-        capabilities:
-          tool: true
-          resource: false
-          prompt: false
-          completion: false
 
-# stdout carries the MCP protocol, so nothing may be logged there.
-logging:
-  pattern:
-    console:
-  file:
-    name: ${FILENET_LOG_FILE:filenet-mcp.log}
-  level:
-    root: INFO
+mcp:
+  server:
+    name: filenet-mcp
+    version: 0.1.0
+  stdio:
+    enabled: true

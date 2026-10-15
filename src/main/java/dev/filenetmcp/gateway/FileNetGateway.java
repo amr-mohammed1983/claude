@@ -14,7 +14,21 @@ import java.util.Map;
 public interface FileNetGateway {
 
     /** Binary payload to attach to / read from a document. */
-    record Content(String fileName, String mimeType, byte[] data) {}
+    final class Content {
+        private final String fileName;
+        private final String mimeType;
+        private final byte[] data;
+
+        public Content(String fileName, String mimeType, byte[] data) {
+            this.fileName = fileName;
+            this.mimeType = mimeType;
+            this.data = data;
+        }
+
+        public String fileName() { return fileName; }
+        public String mimeType() { return mimeType; }
+        public byte[] data() { return data; }
+    }
 
     List<Map<String, Object>> listObjectStores();
 

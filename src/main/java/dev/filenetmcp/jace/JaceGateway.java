@@ -32,11 +32,14 @@ import com.filenet.api.query.SearchScope;
 import com.filenet.api.util.UserContext;
 import dev.filenetmcp.FileNetProperties;
 import dev.filenetmcp.gateway.FileNetGateway;
+import dev.filenetmcp.util.Util;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -48,7 +51,7 @@ import java.util.function.Supplier;
 import javax.security.auth.Subject;
 
 /**
- * {@link FileNetGateway} backed by the FileNet P8 5.7 Content Engine Java API (Jace.jar).
+ * {@link FileNetGateway} backed by the FileNet P8 5.5 Content Engine Java API (Jace.jar), built for Java 8.
  *
  * <p>Every public method goes through {@link #call}, which pushes the authenticated JAAS
  * subject on the current thread (UserContext is thread-local) and always pops it again.
@@ -63,7 +66,7 @@ public final class JaceGateway implements FileNetGateway {
     private volatile Domain domain;
 
     public JaceGateway(FileNetProperties config) {
-        if (config.uri() == null || config.uri().isBlank()) {
+        if (config.uri() == null || config.uri().trim().isEmpty()) {
             throw new IllegalArgumentException("FILENET_URI is required, e.g. https://host:9443/wsi/FNCEWS40MTOM/");
         }
         this.config = config;
@@ -138,22 +141,31 @@ public final class JaceGateway implements FileNetGateway {
 
     private static Object json(Object v) {
         if (v instanceof String || v instanceof Number || v instanceof Boolean) return v;
-        if (v instanceof Date d) return d.toInstant().toString();
-        if (v instanceof List<?> l) return l.stream().map(JaceGateway::json).toList();
-        if (v instanceof IndependentObject io) return String.valueOf(io.getObjectReference().getObjectIdentity());
+        if (v instanceof Date) return ((Date) v).toInstant().toString();
+        if (v instanceof List<?>) {
+            List<Object> out = new ArrayList<>();
+            for (Object o : (List<?>) v) out.add(json(o));
+            return out;
+        }
+        if (v instanceof IndependentObject) return String.valueOf(((IndependentObject) v).getObjectReference().getObjectIdentity());
         if (v instanceof Iterable<?>) return "[collection - fetch explicitly]";
         return v.toString(); // Id, Guid, enums...
     }
 
     /** Writes MCP-supplied values into CE properties. {"$date": ISO-8601} becomes a Date. */
     private static void apply(Properties target, Map<String, Object> values) {
-        values.forEach((name, v) -> target.putObjectValue(name, convert(v)));
+        for (Map.Entry<String, Object> e : values.entrySet()) target.putObjectValue(e.getKey(), convert(e.getValue()));
     }
 
     private static Object convert(Object v) {
-        if (v instanceof Map<?, ?> m && m.get("$date") != null) return Date.from(java.time.Instant.parse(m.get("$date").toString()));
-        if (v instanceof Long l && l >= Integer.MIN_VALUE && l <= Integer.MAX_VALUE) return l.intValue();
-        if (v instanceof List<?> l) return l.stream().map(JaceGateway::convert).toList();
+        if (v instanceof Map<?, ?> && ((Map<?, ?>) v).get("$date") != null)
+            return Date.from(java.time.Instant.parse(((Map<?, ?>) v).get("$date").toString()));
+        if (v instanceof Long && (Long) v >= Integer.MIN_VALUE && (Long) v <= Integer.MAX_VALUE) return ((Long) v).intValue();
+        if (v instanceof List<?>) {
+            List<Object> out = new ArrayList<>();
+            for (Object o : (List<?>) v) out.add(convert(o));
+            return out;
+        }
         return v;
     }
 
@@ -168,9 +180,12 @@ public final class JaceGateway implements FileNetGateway {
     }
 
     private static Map<String, Object> summary(IndependentObject o, String... names) {
-        return toMap(o.getProperties()).entrySet().stream()
-                .filter(e -> names.length == 0 || List.of(names).contains(e.getKey()))
-                .collect(LinkedHashMap::new, (m, e) -> m.put(e.getKey(), e.getValue()), Map::putAll);
+        Map<String, Object> out = new LinkedHashMap<>();
+        List<String> wanted = Arrays.asList(names);
+        for (Map.Entry<String, Object> e : toMap(o.getProperties()).entrySet()) {
+            if (names.length == 0 || wanted.contains(e.getKey())) out.put(e.getKey(), e.getValue());
+        }
+        return out;
     }
 
     // ---- FileNetGateway --------------------------------------------------------------------
@@ -182,7 +197,7 @@ public final class JaceGateway implements FileNetGateway {
             ObjectStoreSet set = domain().get_ObjectStores();
             for (Iterator<?> it = set.iterator(); it.hasNext(); ) {
                 ObjectStore s = (ObjectStore) it.next();
-                out.add(Map.of("symbolicName", s.get_SymbolicName(), "displayName", String.valueOf(s.get_DisplayName())));
+                out.add(Util.mapOf("symbolicName", s.get_SymbolicName(), "displayName", String.valueOf(s.get_DisplayName())));
             }
             return out;
         });
@@ -253,7 +268,7 @@ public final class JaceGateway implements FileNetGateway {
     @Override
     public void deleteObject(String os, String className, String ref) {
         run(() -> {
-            IndependentObject o = fetch(os, className, ref, List.of("Id"));
+            IndependentObject o = fetch(os, className, ref, Collections.singletonList("Id"));
             ((IndependentlyPersistableObject) o).delete();
             save(o);
         });
@@ -286,7 +301,7 @@ public final class JaceGateway implements FileNetGateway {
             ContentTransfer ct = (ContentTransfer) list.get(elementIndex);
             try (InputStream in = ct.accessContentStream()) {
                 String name = ct.get_RetrievalName() != null ? ct.get_RetrievalName() : doc.get_Name();
-                return new Content(name, ct.get_ContentType(), in.readAllBytes());
+                return new Content(name, ct.get_ContentType(), Util.readAll(in));
             } catch (IOException e) {
                 throw new java.io.UncheckedIOException(e);
             }

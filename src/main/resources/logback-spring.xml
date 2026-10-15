@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- stdout carries the MCP protocol in stdio mode, so console logging goes to stderr. -->
+<configuration>
+  <property name="PATTERN" value="%d{HH:mm:ss} %-5level %logger{20} - %msg%n"/>
+  <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
+    <target>System.err</target>
+    <encoder><pattern>${PATTERN}</pattern></encoder>
+  </appender>
+  <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+    <file>${FILENET_LOG_FILE:-filenet-mcp.log}</file>
+    <encoder><pattern>${PATTERN}</pattern></encoder>
+  </appender>
+  <root level="INFO">
+    <appender-ref ref="STDERR"/>
+    <appender-ref ref="FILE"/>
+  </root>
+</configuration>

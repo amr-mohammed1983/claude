@@ -1,13 +1,13 @@
-# FileNet 5.7 MCP Server (Spring AI 2.x)
+# FileNet 5.5 MCP Server (Java 8)
 
-An [MCP](https://modelcontextprotocol.io) server built on **Spring Boot 4 + Spring AI 2.x** that lets AI
-clients (Claude Desktop, Claude Code, …) work with **IBM FileNet Content Manager / P8 5.7** through the
+An [MCP](https://modelcontextprotocol.io) server built on **Java 8 + Spring Boot 2.7** (with a small built-in MCP implementation, since Spring AI and the MCP Java SDK need Java 17) that lets AI
+clients (Claude Desktop, Claude Code, …) work with **IBM FileNet Content Manager / P8 5.5** through the
 official **Content Engine Java API (Jace)**: browse object stores, search with CE SQL, read and write
 documents and folders, download/upload content, and run check-out/check-in.
 
 ```
-MCP client ──stdio (default) or Streamable HTTP + Basic auth──▶ Spring AI MCP server
-                                                                  └─ Jace ──▶ FileNet Content Engine 5.7
+MCP client ──stdio (default) or Streamable HTTP + Basic auth──▶ built-in MCP server
+                                                                  └─ Jace ──▶ FileNet Content Engine 5.5
 ```
 
 ## Quick start (stdio)
@@ -50,7 +50,8 @@ localhost by default. See [docs/configuration.md](docs/configuration.md).
 
 ## Status
 
-Verified: unit tests, a Spring context test, an end-to-end stdio JSON-RPC session, and the HTTP profile
-(401 without credentials, success with). **Not verified:** `JaceGateway` against a real FileNet server or
+Verified: unit tests (including MCP protocol tests), a Spring context test, an end-to-end stdio JSON-RPC session
+against the built jar, and the HTTP profile (401 without credentials, success with). Class files are Java 8
+(major version 52). **Not verified:** `JaceGateway` against a real FileNet server or
 IBM's real `Jace.jar` (proprietary; I compiled it only against a hand-written stub of the API signatures).
 See "Known limitations" in [docs/architecture.md](docs/architecture.md) before production use.

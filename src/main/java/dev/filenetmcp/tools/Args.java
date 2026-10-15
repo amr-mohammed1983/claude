@@ -2,12 +2,15 @@ package dev.filenetmcp.tools;
 
 import dev.filenetmcp.FileNetProperties;
 import dev.filenetmcp.gateway.FileNetGateway.Content;
+import dev.filenetmcp.util.Util;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -17,13 +20,13 @@ public final class Args {
     private final FileNetProperties config;
 
     public Args(Map<String, Object> raw, FileNetProperties config) {
-        this.raw = raw == null ? Map.of() : raw;
+        this.raw = raw == null ? Collections.<String, Object>emptyMap() : raw;
         this.config = config;
     }
 
     public String str(String key) {
         String v = optStr(key, null);
-        if (v == null || v.isBlank()) throw new IllegalArgumentException("Missing required argument: " + key);
+        if (Util.isBlank(v)) throw new IllegalArgumentException("Missing required argument: " + key);
         return v;
     }
 
@@ -45,19 +48,19 @@ public final class Args {
     @SuppressWarnings("unchecked")
     public Map<String, Object> optMap(String key) {
         Object v = raw.get(key);
-        return v == null ? Map.of() : (Map<String, Object>) v;
+        return v == null ? Collections.<String, Object>emptyMap() : (Map<String, Object>) v;
     }
 
     @SuppressWarnings("unchecked")
     public List<String> optList(String key) {
         Object v = raw.get(key);
-        return v == null ? List.of() : (List<String>) v;
+        return v == null ? Collections.<String>emptyList() : (List<String>) v;
     }
 
     /** Object store: explicit argument, else FILENET_OBJECT_STORE. */
     public String objectStore() {
         String os = optStr("objectStore", config.objectStore());
-        if (os == null || os.isBlank())
+        if (Util.isBlank(os))
             throw new IllegalArgumentException("objectStore is required (or set FILENET_OBJECT_STORE)");
         return os;
     }
@@ -81,7 +84,7 @@ public final class Args {
 
     /** Resolves a local path, confined to FILENET_FILE_ROOT when configured. */
     public Path safePath(String path) {
-        Path p = Path.of(path).toAbsolutePath().normalize();
+        Path p = Paths.get(path).toAbsolutePath().normalize();
         Path root = config.fileRoot() == null ? null : config.fileRoot().toAbsolutePath().normalize();
         if (root != null && !p.startsWith(root))
             throw new IllegalArgumentException("Path is outside FILENET_FILE_ROOT: " + path);
